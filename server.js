@@ -1,17 +1,37 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const Project = require('./models/projectModel');
 const User = require('./models/userModel');
 const app = express();
 
 app.use(express.json());
 
+//------------------------- auth --------------------------//
+const auth = (req, res, next) => {
+    const token = req.header('Authorization');
+    if (!token) {
+        return res.status(401).json({message: 'Authorized users only, contact an admin'});
+    }
+
+    try {
+        const decodedToken = jwt.verify(token, 'shh-it-is-a-secret');
+        req.user = decodedToken;
+        next();
+    } catch (error) {
+        res.status(401).json({message: 'Authorized users only, contact an admin'});
+    }
+}
+
 //routes
 app.get('/', (req, res) => {
     res.send('node api now running');
 })
 
-// ------ USERS ---------------
+//-------------------------------------------------- //
+// ------------------ USERS ----------------------- //
+
 app.post('/register', async (req, res) => {
     try {
         const {userName, password} = req.body;
@@ -35,7 +55,24 @@ app.post('/register', async (req, res) => {
     }
 })
 
-app.put('/users/:id', async (req, res) => {
+app.post('/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+
+        const user = await User.findOne({ username });
+        if (!user) {
+            return res.status(401).json({message: 'Invalid password'});
+        }
+
+        const token = jwt.sign({ username: user.userName, role: user.role}, 'shh-it-is-a-secret', {expiresIn: '1h'});
+        res.status(200).json({ token });
+    
+    } catch (error) {
+        res.status(500).json({message: error.message})
+    }
+});
+
+app.put('/users/:id', auth, async (req, res) => {
     try {
         const {id} = req.params;
         const updatedUser = await User.findByIdAndUpdate(id, req.body, {new: true});
@@ -48,7 +85,7 @@ app.put('/users/:id', async (req, res) => {
     }
 })
 
-app.get('/users', async (req, res) => {
+app.get('/users', auth, async (req, res) => {
     try {
         const users = await User.find({})
         res.status(200).json(users)
@@ -58,7 +95,7 @@ app.get('/users', async (req, res) => {
     }
 });
 
-app.delete('/users/:id', async (req, res) => {
+app.delete('/users/:id', auth, async (req, res) => {
     try {
         const {id} = req.params;
         const deletedUser = await User.findByIdAndDelete(id);
@@ -71,7 +108,9 @@ app.delete('/users/:id', async (req, res) => {
     }
 });
 
-// -------------- PROJECTS --------------------
+//--------------------------------------------- //
+// -------------- PROJECTS -------------------- //
+
 app.post('/project', async (req, res) => {
     try {
         const project  = await Project.create(req.body);
@@ -82,7 +121,7 @@ app.post('/project', async (req, res) => {
     }
 });
 
-app.get('/projects', async (req, res) => {
+app.get('/projects', auth, async (req, res) => {
     try {
         const projects = await Project.find({})
         res.status(200).json(projects)
@@ -92,7 +131,7 @@ app.get('/projects', async (req, res) => {
     }
 });
 
-app.get('/projects/:id', async (req, res) => {
+app.get('/projects/:id', auth, async (req, res) => {
     try {
         const {id} = req.params;
         const project = await Project.findById(id)
@@ -103,7 +142,7 @@ app.get('/projects/:id', async (req, res) => {
     }
 });
 
-app.put('/projects/:id', async (req, res) => {
+app.put('/projects/:id', auth, async (req, res) => {
     try {
         const {id} = req.params;
         const updatedProject = await Project.findByIdAndUpdate(id, req.body, {new: true});
@@ -116,7 +155,7 @@ app.put('/projects/:id', async (req, res) => {
     }
 });
 
-app.delete('/projects/:id', async (req, res) => {
+app.delete('/projects/:id', auth, async (req, res) => {
     try {
         const {id} = req.params;
         const deletedProject = await Project.findByIdAndDelete(id);
@@ -128,6 +167,8 @@ app.delete('/projects/:id', async (req, res) => {
         res.status(500).json({message: error.message})
     }
 });
+
+//----------------------------------------------------------------------------//
 
 mongoose.connect('mongodb+srv://admin:3ZM8rDMAoXZAUKd0@stackpearson.dwwrk2s.mongodb.net/c3-print-api?retryWrites=true&w=majority')
 .then(()=> {
