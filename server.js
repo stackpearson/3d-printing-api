@@ -147,7 +147,7 @@ app.put('/projects/:id', auth, async (req, res) => {
         const {id} = req.params;
         const updatedProject = await Project.findByIdAndUpdate(id, req.body, {new: true});
         if(!updatedProject){
-            return res.status(404).json({message: `No products with ID: ${id}`});
+            return res.status(404).json({message: `No projects with ID: ${id}`});
         }
         res.status(200).json(updatedProject);
     } catch (error) {
