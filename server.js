@@ -113,11 +113,28 @@ app.delete('/users/:id', auth, async (req, res) => {
 
 app.post('/project', async (req, res) => {
     try {
-        const project  = await Project.create(req.body);
-        res.status(200).json(project);
+        const { customerName, customerEmail, idea, customerPhone } = req.body;
+
+        if (!customerName || !customerEmail || !idea) {
+            return res.status(400).json({message: 'Name, email and idea are all required'})
+        }
+
+        const projectData = {
+            customerName,
+            customerEmail,
+            idea,
+            customerPhone: customerPhone || ''
+        };
+
+        const project = await Project.create(projectData);
+
+        res.status(200).json({
+            _id: project._id,
+            ...project.toObject()
+        })
     } catch (error) {
-       console.log(error.message);
-       res.status(500).json({message: error.message}); 
+        console.error(error.message);
+        res.status(500).json({ message: error.message });
     }
 });
 

@@ -10,7 +10,11 @@ const projectSchema = mongo.Schema(
             type: String,
             required: [true, "Please provide your email"]
         },
-        itemDescription: {
+        customerPhone: {
+            type: String,
+            required: [false]
+        },
+        idea: {
             type: String,
             required: [true, "Please describe your product"]
         },
